@@ -1,0 +1,3 @@
+service: vfr
+runtime: java17
+instance_class: F1

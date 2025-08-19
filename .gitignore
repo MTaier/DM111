@@ -1,0 +1,6 @@
+
+**/service-accounts.json
+**/*.pem
+**/*.der
+**/.env
+**/application-local.properties
