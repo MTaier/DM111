@@ -1,6 +1,11 @@
 package br.inatel.pos.dm111.vfu.persistence.user;
 
-public record User(String id, String name, String email, String password, UserType type) {
+import java.util.List;
 
-    public enum UserType {REGULAR, RESTAURANT}
+public record User(String id, String name, String email, String password, UserType type,
+        List<String> preferredCategories) {
+
+    public enum UserType {
+        REGULAR, RESTAURANT
+    }
 }

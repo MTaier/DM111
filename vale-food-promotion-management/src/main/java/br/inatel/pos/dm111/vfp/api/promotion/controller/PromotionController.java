@@ -4,8 +4,6 @@ import br.inatel.pos.dm111.vfp.api.core.ApiException;
 import br.inatel.pos.dm111.vfp.api.promotion.PromotionRequest;
 import br.inatel.pos.dm111.vfp.api.promotion.PromotionResponse;
 import br.inatel.pos.dm111.vfp.api.promotion.service.PromotionService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,8 +12,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/valefood/promotions")
 public class PromotionController {
-
-    private static final Logger log = LoggerFactory.getLogger(PromotionController.class);
 
     private final PromotionService promotionService;
 
@@ -35,6 +31,13 @@ public class PromotionController {
     @GetMapping("/{id}")
     public ResponseEntity<PromotionResponse> searchPromotion(@PathVariable String id) throws ApiException {
         return ResponseEntity.ok(promotionService.searchPromotion(id));
+    }
+
+    @GetMapping("/recommended/{userId}")
+    public ResponseEntity<List<PromotionResponse>> searchRecommendedByUser(@PathVariable String userId)
+            throws ApiException {
+        var response = promotionService.searchPromotionsByUserPreferences(userId);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping

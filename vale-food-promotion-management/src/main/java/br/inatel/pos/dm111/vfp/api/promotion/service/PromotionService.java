@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -102,6 +103,29 @@ public class PromotionService {
             }
         } catch (ExecutionException | InterruptedException e) {
             log.error("Failed to delete promotion {}.", id, e);
+            throw new ApiException(AppErrorCode.INTERNAL_DATABASE_COMMUNICATION_ERROR);
+        }
+    }
+
+    public List<PromotionResponse> searchPromotionsByUserPreferences(String userId) throws ApiException {
+        var userOpt = retrieveUserById(userId);
+        if (userOpt.isEmpty()) {
+            log.warn("User not found. Id: {}", userId);
+            throw new ApiException(AppErrorCode.USER_NOT_FOUND);
+        }
+        var user = userOpt.get();
+        var prefs = user.preferredCategories();
+        if (prefs == null || prefs.isEmpty()) {
+            return List.of();
+        }
+        var lower = prefs.stream().map(s -> s.toLowerCase(Locale.ROOT)).toList();
+        try {
+            return promotionRepository.getAll().stream()
+                    .filter(p -> lower.contains(p.category().toLowerCase(Locale.ROOT)))
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Failed to fetch promotions for user {}", userId, e);
             throw new ApiException(AppErrorCode.INTERNAL_DATABASE_COMMUNICATION_ERROR);
         }
     }
