@@ -51,14 +51,6 @@ public class UserController {
                 .body(response);
     }
 
-    @GetMapping("/securedping")
-    public ResponseEntity<Map<String, Object>> securedPing() {
-        return ResponseEntity.ok(Map.of(
-                "ok", true,
-                "service", "user-management",
-                "ts", java.time.Instant.now().toString()));
-    }
-
     // {
     // "name": "Edilson",
     // "email": "edilson@inatel.br",
