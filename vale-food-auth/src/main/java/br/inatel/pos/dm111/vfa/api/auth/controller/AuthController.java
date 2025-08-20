@@ -1,3 +1,4 @@
+
 package br.inatel.pos.dm111.vfa.api.auth.controller;
 
 import br.inatel.pos.dm111.vfa.api.auth.AuthRequest;
@@ -32,7 +33,7 @@ public class AuthController {
 
     @PostMapping
     public ResponseEntity<AuthResponse> auth(@RequestBody AuthRequest request,
-                                             BindingResult bindingResult) throws ApiException {
+            BindingResult bindingResult) throws ApiException {
         log.info("Trying to authenticate...");
 
         validateRequest(request, bindingResult);

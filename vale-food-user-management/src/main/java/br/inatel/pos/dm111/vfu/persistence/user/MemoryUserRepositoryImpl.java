@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Profile("test")
 @Component
-public class MemoryUserRepositoryImpl implements UserRepository{
+public class MemoryUserRepositoryImpl implements UserRepository {
 
     private Map<String, User> db = new HashMap<>();
 

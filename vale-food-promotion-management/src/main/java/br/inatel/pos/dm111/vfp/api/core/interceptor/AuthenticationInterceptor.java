@@ -8,9 +8,9 @@ import br.inatel.pos.dm111.vfp.persistence.restaurant.Restaurant;
 import br.inatel.pos.dm111.vfp.persistence.restaurant.RestaurantRepository;
 import br.inatel.pos.dm111.vfp.persistence.user.User;
 import br.inatel.pos.dm111.vfp.persistence.user.UserRepository;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
-import io.jsonwebtoken.impl.DefaultJws;
 import io.jsonwebtoken.lang.Strings;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,7 +22,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
@@ -55,24 +54,21 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         var method = request.getMethod();
         var uri = request.getRequestURI();
 
-        // Extract token from header. Support both "token" and "Token" header names.
-        var token = request.getHeader("Token");
-        if (!Strings.hasText(token)) {
-            token = request.getHeader("token");
-        }
-
+        // Resolve token from Authorization or Token headers
+        String token = resolveToken(request);
         if (!Strings.hasLength(token)) {
             log.info("JWT token was not provided.");
             throw new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
         }
 
         try {
-            var jws = (DefaultJws<?>) jwtParser.parse(token);
-            @SuppressWarnings("unchecked")
-            var payloadClaims = (Map<String, String>) jws.getPayload();
-            var issuer = payloadClaims.get("iss");
-            var subject = payloadClaims.get("sub");
-            var role = payloadClaims.get("role");
+            // Parse and validate the signed claims using the configured JwtParser.
+            var jws = jwtParser.parseSignedClaims(token);
+            Claims claims = jws.getPayload();
+            String issuer = claims.getIssuer();
+            String subject = claims.getSubject();
+            Object roleObj = claims.get("role");
+            String role = roleObj != null ? roleObj.toString() : null;
 
             var appJwtToken = new AppJwtToken(issuer, subject, role, method, uri);
             authenticateRequest(appJwtToken);
@@ -165,5 +161,17 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             log.error("Failed to read a promotion from DB by id {}.", id, e);
             throw new ApiException(AppErrorCode.INTERNAL_DATABASE_COMMUNICATION_ERROR);
         }
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (Strings.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7).trim();
+        }
+        String tokenHeader = request.getHeader("Token");
+        if (Strings.hasText(tokenHeader)) {
+            return tokenHeader;
+        }
+        return request.getHeader("token");
     }
 }

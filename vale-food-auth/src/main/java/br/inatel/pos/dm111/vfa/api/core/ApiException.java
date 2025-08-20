@@ -9,7 +9,6 @@ public class ApiException extends Exception {
     private final HttpStatus status;
     private final List<AppError> errors;
 
-
     public ApiException(HttpStatus status, List<AppError> errors) {
         this.status = status;
         this.errors = errors;

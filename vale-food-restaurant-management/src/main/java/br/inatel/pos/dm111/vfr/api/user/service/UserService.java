@@ -18,7 +18,6 @@ public class UserService {
         this.repository = repository;
     }
 
-
     public UserRequest createUser(UserRequest request) {
         var user = buildUser(request);
         repository.save(user);

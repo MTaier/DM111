@@ -6,9 +6,9 @@ import br.inatel.pos.dm111.vfr.persistence.restaurant.Restaurant;
 import br.inatel.pos.dm111.vfr.persistence.restaurant.RestaurantRepository;
 import br.inatel.pos.dm111.vfr.persistence.user.User;
 import br.inatel.pos.dm111.vfr.persistence.user.UserRepository;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
-import io.jsonwebtoken.impl.DefaultJws;
 import io.jsonwebtoken.lang.Strings;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
@@ -36,7 +35,8 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
 
-    public AuthenticationInterceptor(JwtParser jwtParser, UserRepository userRepository, RestaurantRepository restaurantRepository) {
+    public AuthenticationInterceptor(JwtParser jwtParser, UserRepository userRepository,
+            RestaurantRepository restaurantRepository) {
         this.jwtParser = jwtParser;
         this.userRepository = userRepository;
         this.restaurantRepository = restaurantRepository;
@@ -48,27 +48,26 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     // RESTAURANTS
     // CREATE, UPDATE, DELETE, READ - PROTECTED API
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
         var method = request.getMethod();
         var uri = request.getRequestURI();
 
         // JWT token validation
-        var token = request.getHeader("Token");
-        if (Strings.hasText(token)) {
-            token = request.getHeader("token");
-        }
-
+        String token = resolveToken(request);
         if (!Strings.hasLength(token)) {
             log.info("JWT token was not provided.");
             throw new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
         }
 
         try {
-            var jwt = (DefaultJws) jwtParser.parse(token);
-            var payloadClaims = (Map<String, String>) jwt.getPayload();
-            var issuer = payloadClaims.get("iss");
-            var subject = payloadClaims.get("sub");
-            var role = payloadClaims.get("role");
+            // Parse and validate the signed claims using the configured JwtParser.
+            var jws = jwtParser.parseSignedClaims(token);
+            Claims claims = jws.getPayload();
+            String issuer = claims.getIssuer();
+            String subject = claims.getSubject();
+            Object roleObj = claims.get("role");
+            String role = roleObj != null ? roleObj.toString() : null;
 
             var appJwtToken = new AppJwtToken(issuer, subject, role, method, uri);
             authenticateRequest(appJwtToken);
@@ -82,8 +81,9 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
-       log.debug("Request was processed successfully");
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+            ModelAndView modelAndView) throws Exception {
+        log.debug("Request was processed successfully");
     }
 
     private void authenticateRequest(AppJwtToken appJwtToken) throws ApiException {
@@ -104,7 +104,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
 
         if (appJwtToken.uri().startsWith("/valefood/restaurants/")) {
             if (appJwtToken.method().equals(HttpMethod.PUT.name()) ||
-                    appJwtToken.method().equals(HttpMethod.DELETE.name()))  {
+                    appJwtToken.method().equals(HttpMethod.DELETE.name())) {
                 var splitUri = appJwtToken.uri().split("/");
                 var pathRestaurantId = splitUri[3];
                 var restaurant = retrieveRestaurantById(pathRestaurantId).orElseThrow(() -> {
@@ -136,5 +136,17 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             log.error("Failed to read a restaurant from DB by id {}.", id, e);
             throw new ApiException(AppErrorCode.INTERNAL_DATABASE_COMMUNICATION_ERROR);
         }
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (Strings.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7).trim();
+        }
+        String token = request.getHeader("Token");
+        if (Strings.hasText(token)) {
+            return token;
+        }
+        return request.getHeader("token");
     }
 }

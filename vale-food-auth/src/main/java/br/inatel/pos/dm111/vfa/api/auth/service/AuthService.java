@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.security.PrivateKey;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
@@ -31,30 +32,32 @@ public class AuthService {
     private final UserRepository repository;
     private final PasswordEncryptor encryptor;
 
-    public AuthService(PrivateKey privateKey,
-            UserRepository repository,
-            PasswordEncryptor encryptor) {
+    public AuthService(PrivateKey privateKey, UserRepository repository, PasswordEncryptor encryptor) {
         this.privateKey = privateKey;
         this.repository = repository;
         this.encryptor = encryptor;
     }
 
-    public AuthResponse authenticate(AuthRequest request) throws ApiException {
-        var userOpt = retrieveUserByEmail(request.email());
+    public AuthResponse authenticate(AuthRequest req) throws ApiException {
 
-        if (userOpt.isPresent()) {
-            var user = userOpt.get();
-            var encryptedPwd = encryptor.encrypt(request.password());
+        var email = req.email().toLowerCase(Locale.ROOT);
+        var userOpt = retrieveUserByEmail(email);
 
-            if (encryptedPwd.equals(user.password())) {
-                var token = generateToken(user);
-                return new AuthResponse(token);
-            }
-        } else {
-            log.info("Invalid credentials provided.");
+        if (userOpt.isEmpty()) {
+            log.info("Invalid credentials (user not found): {}", req.email());
             throw new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
         }
-        return null;
+
+        var user = userOpt.get();
+        var encryptedPwd = encryptor.encrypt(req.password());
+
+        if (!encryptedPwd.equals(user.password())) {
+            log.info("Invalid credentials (password mismatch): {}", req.email());
+            throw new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
+        }
+
+        var token = generateToken(user);
+        return new AuthResponse(token);
     }
 
     private String generateToken(User user) {
@@ -63,18 +66,18 @@ public class AuthService {
         return Jwts.builder()
                 .issuer(tokenIssuer)
                 .subject(user.email())
-                .claim("role", user.type())
+                .claim("role", user.type().name())
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(600)))
+                .expiration(Date.from(now.plusSeconds(3600)))
                 .signWith(privateKey)
                 .compact();
     }
 
     private Optional<User> retrieveUserByEmail(String email) throws ApiException {
         try {
-            return repository.getByEmail(email);
+            return repository.getByEmail(email.toLowerCase(Locale.ROOT));
         } catch (ExecutionException | InterruptedException e) {
-            log.error("Failed to read an users from DB by email.", e);
+            log.error("Failed to read a user from DB by email.", e);
             throw new ApiException(AppErrorCode.INTERNAL_DATABASE_COMMUNICATION_ERROR);
         }
     }

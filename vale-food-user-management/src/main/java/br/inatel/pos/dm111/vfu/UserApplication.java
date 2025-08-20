@@ -1,13 +1,13 @@
-package br.inatel.pos.dm111.vfp;
+package br.inatel.pos.dm111.vfu;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ValeFoodPromotionManagementApplication {
+public class UserApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ValeFoodPromotionManagementApplication.class, args);
+		SpringApplication.run(UserApplication.class, args);
 	}
 
 }

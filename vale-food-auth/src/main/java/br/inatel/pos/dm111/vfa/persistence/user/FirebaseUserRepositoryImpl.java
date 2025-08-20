@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutionException;
 
 @Profile("local")
 @Component
-public class FirebaseUserRepositoryImpl implements UserRepository{
+public class FirebaseUserRepositoryImpl implements UserRepository {
 
     private static final String COLLECTION_NAME = "users";
 

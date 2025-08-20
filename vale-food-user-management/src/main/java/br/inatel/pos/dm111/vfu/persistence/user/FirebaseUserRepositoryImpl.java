@@ -10,10 +10,10 @@ import java.util.concurrent.ExecutionException;
 
 @Profile("local")
 @Component
-public class FirebaseUserRepositoryImpl implements UserRepository{
+public class FirebaseUserRepositoryImpl implements UserRepository
 
+{
     private static final String COLLECTION_NAME = "users";
-
     private final Firestore firestore;
 
     public FirebaseUserRepositoryImpl(Firestore firestore) {
@@ -29,6 +29,7 @@ public class FirebaseUserRepositoryImpl implements UserRepository{
                 .parallelStream()
                 .map(doc -> doc.toObject(User.class))
                 .toList();
+
     }
 
     @Override
@@ -38,7 +39,6 @@ public class FirebaseUserRepositoryImpl implements UserRepository{
                 .get()
                 .get()
                 .toObject(User.class);
-
         return Optional.ofNullable(user);
     }
 

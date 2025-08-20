@@ -10,8 +10,6 @@ public enum AppErrorCode {
     OPERATION_NOT_SUPPORTED("operation.not.supported", "Operation not supported by the given user type.", 403),
     INTERNAL_DATABASE_COMMUNICATION_ERROR("internal.error", "Failure to communicate with repository.", 500);
 
-
-
     private String code;
     private String message;
     private int status;

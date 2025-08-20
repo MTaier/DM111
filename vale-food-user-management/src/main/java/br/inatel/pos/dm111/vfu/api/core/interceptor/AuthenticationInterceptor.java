@@ -24,8 +24,7 @@ import java.util.concurrent.ExecutionException;
 
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
-
-    private static final Logger log = LoggerFactory.getLogger(AuthenticationInterceptor.class);
+    private static final Logger log = LoggerFactory.getLogger((AuthenticationInterceptor.class));
 
     @Value("${vale-food.jwt.custom.issuer}")
     private String tokenIssuer;
@@ -38,28 +37,21 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         this.repository = repository;
     }
 
-    // USERS
-    // CREATE - JWT auth not required
-    // UPDATE, DELETE, READ - PROTECTED API
-    // RESTAURANTS
-    // CREATE, UPDATE, DELETE, READ - PROTECTED API
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
-            throws Exception {
-        var method = request.getMethod();
-        var uri = request.getRequestURI();
+    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) throws Exception {
+        var method = req.getMethod();
+        var uri = req.getRequestURI();
 
         if (!isJwtAuthRequired(method, uri)) {
             return true;
         }
 
         // JWT token validation
-        var token = request.getHeader("Token");
+        var token = req.getHeader("Token");
         if (Strings.hasText(token)) {
-            token = request.getHeader("token");
+            token = req.getHeader("token");
         }
-
-        if (!Strings.hasLength(token)) {
+        if (Strings.hasText(token)) {
             log.info("JWT token was not provided.");
             throw new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
         }
@@ -70,32 +62,28 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             var issuer = payloadClaims.get("iss");
             var subject = payloadClaims.get("sub");
             var role = payloadClaims.get("role");
-
             var appJwtToken = new AppJwtToken(issuer, subject, role, method, uri);
             authenticateRequest(appJwtToken);
-
             return true;
-
         } catch (JwtException e) {
-            log.error("Failure to validate the JWT token.", e);
+            log.error("Failure to validate the JWT token!", e);
             throw new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
         }
     }
 
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
-            ModelAndView modelAndView) throws Exception {
+    public void postHandle(HttpServletRequest req, HttpServletResponse res, Object handler, ModelAndView modelAndView)
+            throws Exception {
         log.debug("Request was processed successfully");
     }
 
     private void authenticateRequest(AppJwtToken appJwtToken) throws ApiException {
-        if (!tokenIssuer.equals(appJwtToken.issuer())) {
+        if (!tokenIssuer.equals((appJwtToken.issuer()))) {
             log.info("Provided token issuer is not valid");
             throw new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
         }
-
         var user = retrieveUserByEmail(appJwtToken.subject()).orElseThrow(() -> {
-            log.info("User was not found for the provided token subject.");
+            log.info("User was not found for the provided subject");
             return new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
         });
 
@@ -108,28 +96,15 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             var splitUri = appJwtToken.uri().split("/");
             var pathUserId = splitUri[3];
             if (!user.id().equals(pathUserId)) {
-                log.info("User provided didn't match to the user Id. " +
-                        "path user id: {} and user Id: {}", pathUserId, user.id());
+                log.info("User provided don't match to the User Id: {}", pathUserId);
                 throw new ApiException(AppErrorCode.INVALID_USER_CREDENTIALS);
             }
         }
 
         if (appJwtToken.uri().startsWith("/valefood/users")) {
-            log.info("Read all restaurants are no longer supported.");
+            log.info("Read all Users not supported");
             throw new ApiException(AppErrorCode.OPERATION_NOT_SUPPORTED);
         }
-    }
-
-    private boolean isJwtAuthRequired(String method, String uri) {
-        if (uri.equals("/valefood/users")) {
-            if (HttpMethod.POST.name().equals(method)) {
-                return false;
-            } else {
-                return true;
-            }
-        }
-
-        return true;
     }
 
     private Optional<User> retrieveUserByEmail(String email) throws ApiException {
@@ -139,5 +114,12 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             log.error("Failed to read an users from DB by email.", e);
             throw new ApiException(AppErrorCode.INTERNAL_DATABASE_COMMUNICATION_ERROR);
         }
+    }
+
+    private boolean isJwtAuthRequired(String method, String uri) {
+        if (uri.equals("/valefood/users")) {
+            return !HttpMethod.POST.name().equals(method);
+        }
+        return true;
     }
 }

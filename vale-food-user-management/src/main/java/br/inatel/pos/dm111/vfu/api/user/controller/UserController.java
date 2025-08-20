@@ -14,6 +14,7 @@ import org.springframework.validation.ValidationUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/valefood/users")
@@ -50,15 +51,23 @@ public class UserController {
                 .body(response);
     }
 
-    //{
-    //        "name": "Edilson",
-    //        "email": "edilson@inatel.br",
-    //        "password": "admin",
-    //        "type": "regular"
-    //    }
+    @GetMapping("/securedping")
+    public ResponseEntity<Map<String, Object>> securedPing() {
+        return ResponseEntity.ok(Map.of(
+                "ok", true,
+                "service", "user-management",
+                "ts", java.time.Instant.now().toString()));
+    }
+
+    // {
+    // "name": "Edilson",
+    // "email": "edilson@inatel.br",
+    // "password": "admin",
+    // "type": "regular"
+    // }
     @PostMapping
     public ResponseEntity<UserResponse> postUser(@RequestBody UserRequest request,
-                                                 BindingResult bindingResult) throws ApiException {
+            BindingResult bindingResult) throws ApiException {
         log.debug("Received request to create a new user...");
 
         validateRequest(request, bindingResult);
@@ -71,8 +80,8 @@ public class UserController {
 
     @PutMapping(value = "/{userId}")
     public ResponseEntity<UserResponse> putUser(@RequestBody UserRequest request,
-                                                @PathVariable("userId") String userId,
-                                                BindingResult bindingResult) throws ApiException {
+            @PathVariable("userId") String userId,
+            BindingResult bindingResult) throws ApiException {
         log.debug("Received request to update an user...");
 
         validateRequest(request, bindingResult);

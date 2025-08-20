@@ -18,7 +18,6 @@ public class UserService {
         this.repository = repository;
     }
 
-
     public UserRequest createUser(UserRequest request) {
         var user = buildUser(request);
         repository.save(user);
@@ -28,6 +27,7 @@ public class UserService {
     }
 
     private User buildUser(UserRequest request) {
-        return new User(request.id(), request.name(), request.email(), null, User.UserType.valueOf(request.type()));
+        return new User(request.id(), request.name(), request.email(), request.password(),
+                User.UserType.valueOf(request.type()));
     }
 }
